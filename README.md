@@ -7,15 +7,15 @@ This is a [pipeline](https://docs.openwebui.com/pipelines/) wrapper for [comfy-m
 - [Open WebUI](https://docs.openwebui.com/getting-started/quick-start)
 - [Open WebUI Pipelines](https://docs.openwebui.com/pipelines/#-quick-start-with-docker)
 - [ComfyUI](https://www.comfy.org/download)
-- Updated [requirements.txt](/blob/main/requirements.txt) for pipelines server
-- JSON Export of a ComfyUI Workflow API - see sample for reference [workflow.json](/blob/main/workflow.json)
+- Updated [requirements.txt](requirements.txt) for pipelines server
+- JSON Export of a ComfyUI Workflow API - see sample for reference [workflow.json](workflow.json)
     - From Comfy UI, select a workflow to export
     - From the top menu, `Workflow` -> `Export (API)` -> provide a filename -> `Confirm`
     - This file will need to be uploaded to the pipeline server
 
 ## Pipeline Installation and Setup
 
-- Follow Open WebUI Pipelines documentation to upload the [comfy-mcp-pipeline.py](/blob/main/comfy-mcp-pipeline.py) to Pipeline server
+- Follow Open WebUI Pipelines documentation to upload the [comfy-mcp-pipeline.py](comfy-mcp-pipeline.py) to Pipeline server
 - Choose `comfy-mcp-pipeline (pipe)` from `Pipeline Valves`
 - Set configuration for the following valves:
     - Comfy Url: Url for your Comfy UI server
