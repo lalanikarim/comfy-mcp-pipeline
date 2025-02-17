@@ -1,10 +1,12 @@
+import asyncio
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+from mcp.types import ImageContent
 from pydantic import BaseModel
 from typing import Generator, Iterator, Union, List
-import asyncio
-
 import os
+import subprocess
+import sys
 
 
 class Pipeline:
@@ -20,43 +22,96 @@ class Pipeline:
         self.valves = self.Valves(
             **{
                 "COMFY_URL": os.getenv("COMFY_URL", "comfy-url"),
-                "COMFY_WORKFLOW_JSON_FILE": os.getenv("COMFY_WORKFLOW_JSON_FILE", "path-to-workflow-json-file"),
-                "PROMPT_NODE_ID": os.getenv("PROMPT_NODE_ID", "prompt-node-id"),
-                "OUTPUT_NODE_ID": os.getenv("OUTPUT_NODE_ID", "output-node-id"),
+                "COMFY_WORKFLOW_JSON_FILE": os.getenv(
+                    "COMFY_WORKFLOW_JSON_FILE",
+                    "path-to-workflow-json-file"),
+                "PROMPT_NODE_ID": os.getenv("PROMPT_NODE_ID",
+                                            "prompt-node-id"),
+                "OUTPUT_NODE_ID": os.getenv("OUTPUT_NODE_ID",
+                                            "output-node-id"),
             }
         )
-        self.read_stream = None
-        self.write_stream = None
-        self.session: ClientSession = None
         pass
 
     async def on_startup(self):
         print(f"on_startup:{__name__}")
-        server_params = StdioServerParameters(
-            command="uvx",
-            args=["comfy-mcp-server"],
-            env=os.environ
-        )
-        (self.read_stream, self.write_stream) = await stdio_client(server_params)
-        self.session = await ClientSession(self.read_stream, self.write_stream)
-        await self.session.initialize()
+        subprocess.check_call([
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "uv",
+        ])
         pass
 
     async def on_shutdown(self):
         print(f"on_shutdown:{__name__}")
-        await self.session.__aexit__()
-        self.write_stream.close()
-        self.read_stream.close()
         pass
 
     def pipe(
-        self, user_message: str, model_id: str, messages: List[dict], body: dict
+        self, user_message: str, model_id: str,
+        messages: List[dict], body: dict
     ) -> Union[str, Generator, Iterator]:
+        if len(user_message) > 500:
+            return ""
+        print(f"Prompt: {user_message}")
+        server_params = StdioServerParameters(
+            command="/usr/local/bin/uvx",
+            args=["comfy-mcp-server"],
+            env={
+                "COMFY_URL": self.valves.COMFY_URL,
+                "COMFY_WORKFLOW_JSON_FILE": (
+                    self.valves.COMFY_WORKFLOW_JSON_FILE
+                ),
+                "PROMPT_NODE_ID": self.valves.PROMPT_NODE_ID,
+                "OUTPUT_NODE_ID": self.valves.OUTPUT_NODE_ID,
+                "PATH": os.getenv("PATH"),
+            }
+        )
+
         async def apipe(
             user_message: str, model_id: str, messages: List[dict], body: dict
         ) -> Union[str, Generator, Iterator]:
-            return await self.session.call_tool("generate_image", arguments={
-                "prompt": user_message
-            })
-        loop = asyncio.get_event_loop()
-        return loop.run_until_complete(self.apipe(user_message, model_id, messages, body))
+            async with stdio_client(server_params) as (read, write):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    return await session.call_tool(
+                        "generate_image", arguments={
+                            "prompt": user_message
+                        })
+        coro = apipe(user_message, model_id, messages, body)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            print("asyncio.run")
+            result = asyncio.run(coro)
+        else:
+            print("loop.run_until_complete")
+            result = loop.run_until_complete(coro)
+        print("result ready")
+        content = result.content[0]
+
+        if isinstance(content, ImageContent):
+            print("image")
+            md_content = f"data:{content.mimeType};base64, {content.data}"
+            return md_content
+        else:
+            print("text")
+            print(content)
+            return f"{content.text}\n"
+
+    async def outlet(self, body: dict, user: dict) -> dict:
+        print(f"outlet:{__name__}")
+
+        messages = body["messages"]
+        last_message = messages[-1]
+        if (last_message["role"] == "assistant"
+                and last_message["content"][:5] == "data:"):
+            image_url = last_message["content"]
+            content = messages[-2]["content"]
+            last_message["content"] = f"Generated: {content}"
+            last_message["files"] = [{"type": "image", "url": image_url}]
+            messages[-1] = last_message
+            body["messages"] = messages
+
+        return body
