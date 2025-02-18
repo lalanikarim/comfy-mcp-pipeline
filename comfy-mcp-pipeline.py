@@ -12,6 +12,7 @@ import sys
 class Pipeline:
     class Valves(BaseModel):
         COMFY_URL: str
+        COMFY_URL_EXTERNAL: str
         COMFY_WORKFLOW_JSON_FILE: str
         PROMPT_NODE_ID: str
         OUTPUT_NODE_ID: str
@@ -22,6 +23,8 @@ class Pipeline:
         self.valves = self.Valves(
             **{
                 "COMFY_URL": os.getenv("COMFY_URL", "comfy-url"),
+                "COMFY_URL_EXTERNAL": os.getenv("COMFY_URL_EXTERNAL",
+                                                "comfy-url-external"),
                 "COMFY_WORKFLOW_JSON_FILE": os.getenv(
                     "COMFY_WORKFLOW_JSON_FILE",
                     "path-to-workflow-json-file"),
@@ -60,11 +63,13 @@ class Pipeline:
             args=["comfy-mcp-server"],
             env={
                 "COMFY_URL": self.valves.COMFY_URL,
+                "COMFY_URL_EXTERNAL": self.valves.COMFY_URL_EXTERNAL,
                 "COMFY_WORKFLOW_JSON_FILE": (
                     self.valves.COMFY_WORKFLOW_JSON_FILE
                 ),
                 "PROMPT_NODE_ID": self.valves.PROMPT_NODE_ID,
                 "OUTPUT_NODE_ID": self.valves.OUTPUT_NODE_ID,
+                "OUTPUT_MODE": "url",
                 "PATH": os.getenv("PATH"),
             }
         )
@@ -98,6 +103,8 @@ class Pipeline:
         else:
             print("text")
             print(content)
+            if content.text[:4] == 'http' and content.text[-11:] == 'type=output':
+                return f"\n![image]({content.text})\n"
             return f"{content.text}\n"
 
     async def outlet(self, body: dict, user: dict) -> dict:

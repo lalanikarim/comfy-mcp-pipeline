@@ -18,10 +18,11 @@ This is a [pipeline](https://docs.openwebui.com/pipelines/) wrapper for [comfy-m
 - Follow Open WebUI Pipelines documentation to upload the [comfy-mcp-pipeline.py](comfy-mcp-pipeline.py) to Pipeline server
 - Choose `comfy-mcp-pipeline (pipe)` from `Pipeline Valves`
 - Set configuration for the following valves:
-    - Comfy Url: Url for your Comfy UI server
-    - Comfy Workflow Json File: path of the workflow JSON file
-    - Prompt Node Id: Id of the text prompt node from workflow JSON file
-    - Output Node Id: Id of the generated image node from the workflow JSON file
+    - Comfy Url: Url for your Comfy UI server.
+    - Comfy Url External: External Url for your Comfy UI server. Use `Comfy Url` value if same.
+    - Comfy Workflow Json File: path of the workflow JSON file.
+    - Prompt Node Id: Id of the text prompt node from workflow JSON file.
+    - Output Node Id: Id of the generated image node from the workflow JSON file.
 - If all steps are successfull, you will see `Comfy MCP Pipeline` in the list of models
 
 ## Usage
