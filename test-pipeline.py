@@ -1,5 +1,6 @@
 from typing import List, Union, Generator, Iterator
 from base64 import b64encode
+from urllib.request import urlopen
 
 
 class Pipeline:
@@ -39,11 +40,11 @@ class Pipeline:
     ) -> Union[str, Generator, Iterator]:
         print(f"pipe:{__name__}")
 
-        file = f"/app/pipelines/Image-{user_message}.png" if user_message in [
+        file = f"https://raw.githubusercontent.com/lalanikarim/comfy-mcp-pipeline/refs/heads/large-file-issue/assets/Image-{user_message}.png" if user_message in [
             '208', '512', '1024'] else None
         if file is not None:
             print(file)
-            with open(file, "rb") as image:
+            with urlopen(file) as image:
                 encoded = b64encode(image.read())
                 return f"data:image/png;base64,{encoded}"
 
